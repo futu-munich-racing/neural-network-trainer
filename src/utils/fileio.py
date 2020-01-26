@@ -1,6 +1,7 @@
 import os
 import glob
 import json
+import shutil
 
 import time
 
@@ -32,7 +33,35 @@ def donkey_car_load_records_from_dir(inputdir: str) -> list:
 
     return records
 
+def process_donkey_data_dir(inputdir: str, tub_dir_prefix: str = '') -> dict:
+    
+    session_dirs = glob.glob(os.path.join(inputdir, tub_dir_prefix + '*'))
+
+    session_records = dict()
+    for session_dir in session_dir:
+        session_name = tub_dir[len(inputdir)+1:]
+        session_records[session_name] = donkey_car_load_records_from_dir(inputdir=session_dir)
+    
+    return session_records
+
+def move_train_split_files(inputdir: str, train_records: list, val_records: list = None, test_records: list = None):
+
+    def _move_records_data(inputdir: str, destdir: str, records: list):
+        with open(os.path.join(destdir, 'records.csv'), 'w') as f_csv:
+            f_csv.write("'cam/image_array','timestamp','user/throttle','user/angle','user/mode','img_path'\n")
+            for record in records:
+                img_file = record['img_path']
+                shutil.copyfile(os.path.join(inputdir, img_file), os.path.join(destdir, img_file))
+                f_csv.write('%s,%s,%f,%f,%s,%s\n' % (
+                    record['cam/image_array'],
+                    record['timestamp'], 
+                    record['user/throttle'],
+                    record['user/angle'],
+                    record['user/mode'],
+                    record['img_path']))
+
 def load_tub_data_to_records(data_dir):
+    'Old tub loading function. Works still and provides a baseline'
     # Get a list of directories starting with word tub
     tub_dirs = glob.glob(os.path.join(data_dir, 'tub*'))
     # Sort the directories
