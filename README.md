@@ -12,11 +12,23 @@ This repository provides tools to train neural networks in AWS. It helps with co
 ## Usage / pipeline / steps
 1. Upload your data to S3 **OPTIONAL**
 1. (Clean the data **TODO**)
-1. Split records into train/val/test sets
+1. Split records into train/val/test setss
+    ```
+    python3 src/data_split.py   -inputdir <str> 
+                                -tub-dir-prefix <str>
+                                -outputdir <str>
+                                -train-split <float 0.0-1.0>
+                                -val-split <float 0.0-1.0>
+                                -test-split <float 0.0-1.0>
+    ```
 1. Convert raw data to tf records
-    - `./src/convert_to_tfrecords.py -inputdir <input> -output <output>`
+    ```
+    ./src/convert_to_tfrecords.py -inputdir <str> -output <str>
+    ```
 1. Run the training script
-    - `./src/train_model.py -inputdir <input> -modelfile <output>`
+    ```
+    ./src/train_model.py -inputdir <input> -modelfile <output>
+    ```
 1. Monitor
     - **TODO**
     - Tensorboard / Valohai / AWS Sagemaker
