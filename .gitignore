@@ -1,0 +1,8 @@
+# Ignore virtual-env
+nettrainer/*
+
+# Ignore data files
+data/*
+
+# Ignore all compiled files
+*.cpython*
