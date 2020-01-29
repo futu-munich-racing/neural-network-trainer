@@ -62,6 +62,28 @@ def load_tub_data_to_records(data_dir):
 
     return records
 
+def load_csv_records(filename: str) -> list():
+    'Loads a csv file and returns a list'
+
+    records = []
+
+    with open(filename, 'r') as f:
+        # Read header
+        columns = f.readline().replace("'",'').replace('\n', '').split(',')
+
+        for line in f:
+            values = line.replace('\n', '').split(',')
+            #all_values.append(values)
+            # 'cam/image_array','timestamp','user/throttle','user/angle','user/mode','img_path'
+            record = dict()
+            for i, column in enumerate(columns):
+                if (column == 'user/throttle') or (column == 'user/angle'):
+                    values[i] = float(values[i])
+                record[column] = values[i]
+
+            records.append(record)
+    return records
+
 def decode_img(img: bytes):
 
     # convert the compressed string to a 3D uint8 tensor
@@ -72,7 +94,8 @@ def decode_img(img: bytes):
     return tf.image.resize(img, [120, 180])
 
 def convert_data_to_tfrecords(inputdir: str, output: str):
-    records = load_tub_data_to_records(inputdir)
+    #records = load_tub_data_to_records(inputdir)
+    records = load_csv_records(os.path.join(inputdir, 'records.csv'))
 
     # Make sure that dest dir exists
     if os.path.exists(os.path.dirname(output)) == False:
