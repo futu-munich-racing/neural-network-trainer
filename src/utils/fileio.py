@@ -1,6 +1,7 @@
 import os
 import glob
 import json
+import shutil
 
 import time
 
@@ -8,14 +9,14 @@ import tensorflow as tf
 
 from utils import tf_tools
 
-def donkey_car_load_records_from_dir(inputdir: str) -> list:
+def donkey_car_load_records_from_dir(inputdir: str, tubdir: str) -> list:
     'Loads donkeycar type of json records from a directory'
 
     def _parse_record_index(filename: str) -> int:
         return int(filename.split('_')[1].split('.')[0])
 
     # Get a list of records
-    filenames = glob.glob(os.path.join(inputdir, 'record_*.json'))
+    filenames = glob.glob(os.path.join(os.path.join(inputdir, tubdir, 'record_*.json')))
 
     # Sort them based on indexes
     idx = [-1] * len(filenames)
@@ -27,12 +28,58 @@ def donkey_car_load_records_from_dir(inputdir: str) -> list:
     records = [dict()] * len(filenames)
     # TODO: Speed up the loading. This loop takes agest (>90% of time)
     for i, ix in enumerate(idx):
-        with open(os.path.join(inputdir, 'record_%d.json' % ix), 'r') as f:
+        with open(os.path.join(inputdir, tubdir, 'record_%d.json' % ix), 'r') as f:
             records[i] = json.load(f)
+            records[i].update({'img_path': os.path.join(tubdir, records[i]['cam/image_array'])})
 
     return records
 
+def process_donkey_data_dir(inputdir: str, tub_dir_prefix: str = '') -> dict:
+    
+    session_dirs = glob.glob(os.path.join(inputdir, tub_dir_prefix + '*'))
+
+    session_records = dict()
+    for session_dir in session_dirs:
+        # Check that the dir is actually a directory
+        if os.path.isdir(session_dir):
+            session_name = session_dir[len(inputdir):]
+            session_records[session_name] = donkey_car_load_records_from_dir(inputdir=inputdir, tubdir=session_name)
+            # If there is no records, lets remove the session
+            if len(session_records[session_name]) == 0:
+                _ = session_records.pop(session_name)
+    
+    return session_records
+
+def move_train_split_files(inputdir: str, outputdir: str, train_records: list, val_records: list = None, test_records: list = None):
+
+    def _move_records_data(inputdir: str, outputdir: str, records: list):
+        if os.path.exists(outputdir) == False:
+            os.makedirs(outputdir)
+
+        with open(os.path.join(outputdir, 'records.csv'), 'w') as f_csv:
+            f_csv.write("'cam/image_array','timestamp','user/throttle','user/angle','user/mode','img_path'\n")
+            for record in records:
+
+                img_file = record['img_path']
+                if os.path.exists(os.path.dirname(os.path.join(outputdir, img_file))) == False:
+                    os.makedirs(os.path.dirname(os.path.join(outputdir, img_file)))
+                
+                shutil.copyfile(os.path.join(inputdir, img_file), os.path.join(outputdir, img_file))
+                f_csv.write('%s,%s,%f,%f,%s,%s\n' % (
+                    record['cam/image_array'],
+                    record['timestamp'], 
+                    record['user/throttle'],
+                    record['user/angle'],
+                    record['user/mode'],
+                    record['img_path']))
+
+    _move_records_data(inputdir=inputdir, outputdir=os.path.join(outputdir, 'train'), records=train_records)
+    _move_records_data(inputdir=inputdir, outputdir=os.path.join(outputdir, 'val'), records=val_records)
+    _move_records_data(inputdir=inputdir, outputdir=os.path.join(outputdir, 'test'), records=test_records)
+
+
 def load_tub_data_to_records(data_dir):
+    'Old tub loading function. Works still and provides a baseline'
     # Get a list of directories starting with word tub
     tub_dirs = glob.glob(os.path.join(data_dir, 'tub*'))
     # Sort the directories
