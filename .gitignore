@@ -4,5 +4,8 @@ nettrainer/*
 # Ignore data files
 data/*
 
+# Ignore temp stuff
+tmp/*
+
 # Ignore all compiled files
 *.cpython*
