@@ -32,3 +32,27 @@ def serialize_example(image, angle, throttle):
     # Create a Features message using tf.train.Example.
     example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
     return example_proto.SerializeToString()
+
+def decode_jpeg(image_buffer, scope=None):
+  """Decode a JPEG string into one 3-D float image Tensor.
+  Args:
+  image_buffer: scalar string Tensor.
+  scope: Optional scope for name_scope.
+  Returns:
+  3-D float Tensor with values ranging from [0, 1).
+  """
+  #with tf.name_scope(values=[image_buffer], name=scope,
+  #                default_name='decode_jpeg'):
+  # Decode the string as an RGB JPEG.
+  # Note that the resulting image contains an unknown height
+  # and width that is set dynamically by decode_jpeg. In other
+  # words, the height and width of image is unknown at compile-i
+  # time.
+  image = tf.image.decode_jpeg(image_buffer, channels=3)
+
+  # After this point, all image pixels reside in [0,1)
+  # until the very end, when they're rescaled to (-1, 1).
+  # The various adjust_* ops all require this range for dtype
+  # float.
+  image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+  return image
