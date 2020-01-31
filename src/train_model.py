@@ -25,6 +25,25 @@ def parse_arguments(argv):
     parser.add_argument("--epochs", type=int, default=defaults.EPOCHS)
     parser.add_argument("--min-delta", type=float, default=defaults.MIN_DELTA)
     parser.add_argument("--patience", type=int, default=defaults.PATIENCE)
+    parser.add_argument(
+        "--input-image-width", type=int, default=defaults.INPUT_IMAGE_WIDTH
+    )
+    parser.add_argument(
+        "--input-image-height", type=int, default=defaults.INPUT_IMAGE_HEIGHT
+    )
+    parser.add_argument(
+        "--input-image-channels", type=int, default=defaults.INPUT_IMAGE_CHANNELS
+    )
+    parser.add_argument(
+        "--input-image-vertical-crop-pixels",
+        default=defaults.INPUT_IMAGE_CROP_VERTICAL_PIXELS,
+    )
+    parser.add_argument(
+        "--weight-angle-loss", type=float, default=defaults.WEIGHT_ANGLE_LOSS
+    )
+    parser.add_argument(
+        "--weight-throttle-loss", type=float, default=defaults.WEIGHT_THROTTLE_LOSS
+    )
     parser.add_argument("--verbose", type=int, default=0)
 
     args = parser.parse_args()
@@ -32,7 +51,9 @@ def parse_arguments(argv):
     return args
 
 
-def _parse_fn(example_serialized, is_training=False):
+def _parse_fn(
+    example_serialized, is_training=False, img_width=240, img_height=360, img_channels=3
+):
     """ Parse tensorflow records and return X, y, 
         where X is image and y is (angle and throttle)
     """
@@ -46,7 +67,7 @@ def _parse_fn(example_serialized, is_training=False):
     parsed = tf.io.parse_single_example(example_serialized, feature_map)
     image = tf.io.decode_jpeg(parsed["image"])
     # TODO: Image dims should also come from a config / input
-    image = tf.reshape(image, (1, 240, 360, 3))
+    image = tf.reshape(image, (1, img_height, img_width, img_channels))
     return (image, (parsed["angle"], parsed["throttle"]))
 
 
@@ -59,16 +80,33 @@ def main(argv):
 
     args = parse_arguments(argv=argv)
 
+    # TODO: We should be able to load a bunch of records and choose a batch from it
     raw_trainset = tf.data.TFRecordDataset(
-        os.path.join(args.train_dir, "train.tfrecord")
+        filenames=os.path.join(args.train_dir, "train.tfrecord")
     )
-    parsed_trainset = raw_trainset.map(_parse_fn)
+    parsed_trainset = raw_trainset.map(
+        lambda d: _parse_fn(
+            d,
+            True,
+            args.input_image_width,
+            args.input_image_height,
+            args.input_image_channels,
+        )
+    )
 
     # Read validation dataset
     raw_validationset = tf.data.TFRecordDataset(
         os.path.join(args.val_dir, "val.tfrecord")
     )
-    parsed_validationset = raw_trainset.map(_parse_fn)
+    parsed_validationset = raw_trainset.map(
+        lambda d: _parse_fn(
+            d,
+            True,
+            args.input_image_width,
+            args.input_image_height,
+            args.input_image_channels,
+        )
+    )
 
     num_train_samples = sum(1 for record in parsed_trainset)
     num_val_samples = sum(1 for record in parsed_validationset)
@@ -78,10 +116,14 @@ def main(argv):
         % (num_train_samples, num_val_samples)
     )
 
-    weight_loss_angle = 0.9
-    weight_loss_throttle = 0.1
-
-    model = basic_linear_model.create_model(img_dims=[240, 360, 3])
+    model = basic_linear_model.create_model(
+        img_dims=[
+            args.input_image_height,
+            args.input_image_width,
+            args.input_image_channels,
+        ],
+        crop_margin_from_top=args.input_image_vertical_crop_pixels,
+    )
 
     if os.path.exists(os.path.dirname(args.output_model_file)) == False:
         os.makedirs(os.path.dirname(args.output_model_file))
