@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import glob
 import logging
 import json
 
@@ -66,7 +67,6 @@ def _parse_fn(
 
     parsed = tf.io.parse_single_example(example_serialized, feature_map)
     image = tf.io.decode_jpeg(parsed["image"])
-    # TODO: Image dims should also come from a config / input
     image = tf.reshape(image, (1, img_height, img_width, img_channels))
     return (image, (parsed["angle"], parsed["throttle"]))
 
@@ -81,9 +81,12 @@ def main(argv):
     args = parse_arguments(argv=argv)
 
     # TODO: We should be able to load a bunch of records and choose a batch from it
+    filenames = glob.glob(os.path.join(args.train_dir, "*.tfrecord"))
+    print(filenames)
     raw_trainset = tf.data.TFRecordDataset(
-        filenames=os.path.join(args.train_dir, "train.tfrecord")
+        filenames=filenames
     )
+
     parsed_trainset = raw_trainset.map(
         lambda d: _parse_fn(
             d,
@@ -95,10 +98,11 @@ def main(argv):
     )
 
     # Read validation dataset
+    filenames = glob.glob(os.path.join(args.val_dir, "*.tfrecord"))
     raw_validationset = tf.data.TFRecordDataset(
-        os.path.join(args.val_dir, "val.tfrecord")
+        filenames = filenames
     )
-    parsed_validationset = raw_trainset.map(
+    parsed_validationset = raw_validationset.map(
         lambda d: _parse_fn(
             d,
             True,
@@ -154,7 +158,7 @@ def main(argv):
         validation_steps=num_val_samples // args.batch_size,
         epochs=args.epochs,
         callbacks=[JsonLogger(), save_best, early_stop],
-        verbose=0,
+        verbose=args.verbose,
     )
 
 
