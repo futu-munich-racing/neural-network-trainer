@@ -16,14 +16,16 @@ def parse_input_arguments(argv):
     return parser.parse_args()
 
 def convert_rawdat_to_tfrecords(inputdir: str, output: str, img_width: int=256, img_height: int=256):
-    fileio.convert_data_to_tfrecords(inputdir, output)
+    fileio.convert_data_to_tfrecords(inputdir, output, img_width, img_height)
 
 def main(argv):
     args = parse_input_arguments(argv)
     print(args)
 
     convert_rawdat_to_tfrecords(inputdir=args.inputdir,
-                                output=args.output)
+                                output=args.output,
+                                img_width=args.imgwidth,
+                                img_height=args.imgheight)
 
 if __name__ == "__main__":
     main(sys.argv)

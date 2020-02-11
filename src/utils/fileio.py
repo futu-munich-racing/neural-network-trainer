@@ -167,34 +167,35 @@ def load_csv_records(filename: str) -> list():
             records.append(record)
     return records
 
-
-def decode_img(img: bytes):
-
-    # convert the compressed string to a 3D uint8 tensor
-    img = tf.image.decode_jpeg(img, channels=3)
-    # Use `convert_image_dtype` to convert to floats in the [0,1] range.
-    img = tf.image.convert_image_dtype(img, tf.float32)
-    # resize the image to the desired size.
-    return tf.image.resize(img, [120, 180])
-
-
-def convert_data_to_tfrecords(inputdir: str, output: str):
+def convert_data_to_tfrecords(inputdir: str, outputdir: str, img_width: int=256, img_height: int=256, n_images_per_file=10240):
     # records = load_tub_data_to_records(inputdir)
     records = load_csv_records(os.path.join(inputdir, "records.csv"))
 
     # Make sure that dest dir exists
-    if os.path.exists(os.path.dirname(output)) == False:
-        os.makedirs(os.path.dirname(output))
+    if os.path.exists(os.path.dirname(outputdir)) == False:
+        os.makedirs(os.path.dirname(outputdir))
 
     # Write the `tf.Example` observations to the file.
-    with tf.io.TFRecordWriter(output) as writer:
-        for i, record in enumerate(records):
-            # parse fields
-            image_string = open(os.path.join(inputdir, record["img_path"]), "rb").read()
-            angle = record["user/angle"]
-            throttle = record["user/throttle"]
-            example = tf_tools.serialize_example(image_string, angle, throttle)
-            writer.write(example)
+    batch_id = 0
+    output = os.path.join(outputdir, 'record_%04d.tfrecord' % batch_id)
+    print(f'Storing records in {output}')
+    writer = tf.io.TFRecordWriter(output)
+    for i, record in enumerate(records):
+        # parse fields
+        image = tf.io.read_file(os.path.join(inputdir, record["img_path"]))
+        image = tf.io.decode_jpeg(image)
+        #image = tf.image.resize(image, (img_height, img_width))
 
-            if i % 1000 == 0:
-                print(i, len(records), 100 * i / len(records))
+        angle = record["user/angle"]
+        throttle = record["user/throttle"]
+        example = tf_tools.serialize_example(image, angle, throttle)
+        writer.write(example)
+
+        if i % 1000 == 0:
+            print(i, len(records), 100 * i / len(records))
+        
+        if (i > 0) and (i % n_images_per_file == 0):
+            batch_id += 1
+            output = os.path.join(outputdir, 'record_%04d.tfrecord' % batch_id)
+            print(f'Storing records in {output}')
+            writer = tf.io.TFRecordWriter(output)

@@ -53,7 +53,7 @@ def parse_arguments(argv):
 
 
 def _parse_fn(
-    example_serialized, is_training=False, img_width=240, img_height=360, img_channels=3
+    example_serialized, is_training=False, img_width=256, img_height=256, img_channels=3
 ):
     """ Parse tensorflow records and return X, y, 
         where X is image and y is (angle and throttle)
@@ -61,12 +61,18 @@ def _parse_fn(
     # TODO: it would be cool, if this could come from a file e.g. meta.json (donkeycar)
     feature_map = {
         "image": tf.io.FixedLenFeature([], dtype=tf.string, default_value=""),
+        "image_rows": tf.io.FixedLenFeature([], dtype=tf.int64, default_value=0),
+        "image_cols": tf.io.FixedLenFeature([], dtype=tf.int64, default_value=0),
         "angle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
         "throttle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
     }
 
     parsed = tf.io.parse_single_example(example_serialized, feature_map)
     image = tf.io.decode_jpeg(parsed["image"])
+    print(image.shape)
+    print(parsed)
+    img_height, img_width, img_channels = (parsed["image_rows"], parsed["image_cols"], 3) #tf.shape(image).numpy()
+    print(f'image shape: {img_height}x{img_width}x{img_channels}')
     image = tf.reshape(image, (1, img_height, img_width, img_channels))
     return (image, (parsed["angle"], parsed["throttle"]))
 
@@ -75,42 +81,49 @@ class JsonLogger(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         print(json.dumps(dict({"loss": logs["loss"], "val_loss": logs["val_loss"]})))
 
+def read_tfrecords_dir(dirname: str, image_width: int=256, image_height: int=256, image_channels: int=3):
+    filenames = glob.glob(os.path.join(dirname, "*.tfrecord"))
+    
+    print(f'tfrecords: {filenames}')
+
+    raw_dataset = tf.data.TFRecordDataset(
+        filenames=filenames
+    )
+
+    dataset = raw_dataset.map(
+        lambda d: _parse_fn(
+            d,
+            image_width,
+            image_height,
+            image_channels,
+        )
+    )
+
+    return dataset
 
 def main(argv):
 
     args = parse_arguments(argv=argv)
 
-    # TODO: We should be able to load a bunch of records and choose a batch from it
-    filenames = glob.glob(os.path.join(args.train_dir, "*.tfrecord"))
-    print(filenames)
-    raw_trainset = tf.data.TFRecordDataset(
-        filenames=filenames
-    )
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
-    parsed_trainset = raw_trainset.map(
-        lambda d: _parse_fn(
-            d,
-            True,
-            args.input_image_width,
-            args.input_image_height,
-            args.input_image_channels,
+    # Load a bunch of training records
+    logger.info('Loading training tf-records')
+    parsed_trainset = read_tfrecords_dir(
+        args.train_dir,
+        args.input_image_width,
+        args.input_image_height,
+        args.input_image_channels
         )
-    )
 
     # Read validation dataset
-    filenames = glob.glob(os.path.join(args.val_dir, "*.tfrecord"))
-    raw_validationset = tf.data.TFRecordDataset(
-        filenames = filenames
-    )
-    parsed_validationset = raw_validationset.map(
-        lambda d: _parse_fn(
-            d,
-            True,
-            args.input_image_width,
-            args.input_image_height,
-            args.input_image_channels,
+    parsed_validationset = read_tfrecords_dir(
+        args.val_dir,
+        args.input_image_width,
+        args.input_image_height,
+        args.input_image_channels
         )
-    )
 
     num_train_samples = sum(1 for record in parsed_trainset)
     num_val_samples = sum(1 for record in parsed_validationset)
@@ -122,8 +135,8 @@ def main(argv):
 
     model = basic_linear_model.create_model(
         img_dims=[
-            args.input_image_height,
-            args.input_image_width,
+            256, #args.input_image_height,
+            341, #args.input_image_width,
             args.input_image_channels,
         ],
         crop_margin_from_top=args.input_image_vertical_crop_pixels,

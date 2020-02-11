@@ -26,8 +26,15 @@ def serialize_example(image, angle, throttle):
     """
     # Create a dictionary mapping the feature name to the tf.Example-compatible
     # data type.
+    image_rows, image_cols, image_channels = image.shape
+    #image = tf.image.convert_image_dtype(image, tf.float32).numpy().tobytes()
+    image = tf.image.encode_jpeg(image) #.numpy().tobytes() #.numpy()
+    #image = image.numpy().tobytes()
     feature = {
         "image": _bytes_feature(image),
+        "image_rows": _int64_feature(image_rows),
+        "image_cols": _int64_feature(image_cols),
+        "image_channels": _int64_feature(image_channels),
         "angle": _float_feature(angle),
         "throttle": _float_feature(throttle),
     }
