@@ -61,18 +61,17 @@ def _parse_fn(
     # TODO: it would be cool, if this could come from a file e.g. meta.json (donkeycar)
     feature_map = {
         "image": tf.io.FixedLenFeature([], dtype=tf.string, default_value=""),
-        "image_rows": tf.io.FixedLenFeature([], dtype=tf.int64, default_value=0),
-        "image_cols": tf.io.FixedLenFeature([], dtype=tf.int64, default_value=0),
         "angle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
         "throttle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
     }
 
+    # Parse Example / sample in tfrecord
     parsed = tf.io.parse_single_example(example_serialized, feature_map)
+    # Decode JPEG compressed image
     image = tf.io.decode_jpeg(parsed["image"])
-    print(image.shape)
-    print(parsed)
-    img_height, img_width, img_channels = (parsed["image_rows"], parsed["image_cols"], 3) #tf.shape(image).numpy()
-    print(f'image shape: {img_height}x{img_width}x{img_channels}')
+    # Resize image to given size
+    image = tf.image.resize(image, (img_height, img_width))
+    # Reshape image from 3D to 4D
     image = tf.reshape(image, (1, img_height, img_width, img_channels))
     return (image, (parsed["angle"], parsed["throttle"]))
 
@@ -81,25 +80,30 @@ class JsonLogger(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         print(json.dumps(dict({"loss": logs["loss"], "val_loss": logs["val_loss"]})))
 
-def read_tfrecords_dir(dirname: str, image_width: int=256, image_height: int=256, image_channels: int=3):
-    filenames = glob.glob(os.path.join(dirname, "*.tfrecord"))
-    
-    print(f'tfrecords: {filenames}')
 
-    raw_dataset = tf.data.TFRecordDataset(
-        filenames=filenames
-    )
+def read_tfrecords_dir(
+    dirname: str,
+    image_width: int = 256,
+    image_height: int = 256,
+    image_channels: int = 3,
+):
+    filenames = glob.glob(os.path.join(dirname, "*.tfrecord"))
+
+    print(f"tfrecords: {filenames}")
+
+    raw_dataset = tf.data.TFRecordDataset(filenames=filenames)
 
     dataset = raw_dataset.map(
         lambda d: _parse_fn(
-            d,
-            image_width,
-            image_height,
-            image_channels,
+            example_serialized=d,
+            img_width=image_width,
+            img_height=image_height,
+            img_channels=image_channels,
         )
     )
 
     return dataset
+
 
 def main(argv):
 
@@ -109,21 +113,22 @@ def main(argv):
     logger.setLevel(logging.DEBUG)
 
     # Load a bunch of training records
-    logger.info('Loading training tf-records')
+    logger.info("Loading training samples tfrecords")
     parsed_trainset = read_tfrecords_dir(
-        args.train_dir,
-        args.input_image_width,
-        args.input_image_height,
-        args.input_image_channels
-        )
+        dirname=args.train_dir,
+        image_width=args.input_image_width,
+        image_height=args.input_image_height,
+        image_channels=args.input_image_channels,
+    )
 
     # Read validation dataset
+    logger.info("Loading validation samples tfrecords")
     parsed_validationset = read_tfrecords_dir(
-        args.val_dir,
-        args.input_image_width,
-        args.input_image_height,
-        args.input_image_channels
-        )
+        dirname=args.val_dir,
+        image_width=args.input_image_width,
+        image_height=args.input_image_height,
+        image_channels=args.input_image_channels,
+    )
 
     num_train_samples = sum(1 for record in parsed_trainset)
     num_val_samples = sum(1 for record in parsed_validationset)
@@ -134,11 +139,9 @@ def main(argv):
     )
 
     model = basic_linear_model.create_model(
-        img_dims=[
-            256, #args.input_image_height,
-            341, #args.input_image_width,
-            args.input_image_channels,
-        ],
+        image_width=args.input_image_width,
+        image_height=args.input_image_height,
+        image_channels=args.input_image_channels,
         crop_margin_from_top=args.input_image_vertical_crop_pixels,
     )
 

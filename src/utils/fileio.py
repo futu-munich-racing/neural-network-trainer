@@ -182,9 +182,7 @@ def convert_data_to_tfrecords(inputdir: str, outputdir: str, img_width: int=256,
     writer = tf.io.TFRecordWriter(output)
     for i, record in enumerate(records):
         # parse fields
-        image = tf.io.read_file(os.path.join(inputdir, record["img_path"]))
-        image = tf.io.decode_jpeg(image)
-        #image = tf.image.resize(image, (img_height, img_width))
+        image = open(os.path.join(inputdir, record["img_path"]), 'rb').read()
 
         angle = record["user/angle"]
         throttle = record["user/throttle"]
