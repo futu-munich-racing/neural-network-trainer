@@ -9,3 +9,6 @@ tmp/*
 
 # Ignore all compiled files
 *.cpython*
+
+# Ignore cached stuff
+__pycache__

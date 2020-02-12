@@ -1,31 +1,35 @@
 import sys
 import argparse
 
-IMG_DEFAULT_WIDTH = 256
-IMG_DEFAULT_HEIGTH = 256
-
 from utils import fileio
+
+import defaults
+
 
 def parse_input_arguments(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-inputdir', type=str)
-    parser.add_argument('-output', type=str)
-    parser.add_argument('-imgwidth', type=int, default=IMG_DEFAULT_WIDTH)
-    parser.add_argument('-imgheight', type=int, default=IMG_DEFAULT_HEIGTH)
-    
+    parser.add_argument("-i", "--inputdir", type=str)
+    parser.add_argument("-o", "--outputdir", type=str)
+    parser.add_argument(
+        "-n-images-per-file", type=int, default=defaults.N_IMAGES_PER_TFRECORD
+    )
+
     return parser.parse_args()
 
-def convert_rawdat_to_tfrecords(inputdir: str, output: str, img_width: int=256, img_height: int=256):
-    fileio.convert_data_to_tfrecords(inputdir, output, img_width, img_height)
+
+def convert_rawdat_to_tfrecords(inputdir: str, output: str):
+    fileio.convert_data_to_tfrecords(inputdir, output)
+
 
 def main(argv):
     args = parse_input_arguments(argv)
-    print(args)
 
-    convert_rawdat_to_tfrecords(inputdir=args.inputdir,
-                                output=args.output,
-                                img_width=args.imgwidth,
-                                img_height=args.imgheight)
+    fileio.convert_data_to_tfrecords(
+        inputdir=args.inputdir,
+        outputdir=args.outputdir,
+        n_images_per_file=args.n_images_per_file,
+    )
+
 
 if __name__ == "__main__":
     main(sys.argv)

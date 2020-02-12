@@ -156,8 +156,7 @@ def load_csv_records(filename: str) -> list():
 
         for line in f:
             values = line.replace("\n", "").split(",")
-            # all_values.append(values)
-            # 'cam/image_array','timestamp','user/throttle','user/angle','user/mode','img_path'
+            
             record = dict()
             for i, column in enumerate(columns):
                 if (column == "user/throttle") or (column == "user/angle"):
@@ -167,7 +166,7 @@ def load_csv_records(filename: str) -> list():
             records.append(record)
     return records
 
-def convert_data_to_tfrecords(inputdir: str, outputdir: str, img_width: int=256, img_height: int=256, n_images_per_file=10240):
+def convert_data_to_tfrecords(inputdir: str, outputdir: str, n_images_per_file=10240):
     # records = load_tub_data_to_records(inputdir)
     records = load_csv_records(os.path.join(inputdir, "records.csv"))
 
