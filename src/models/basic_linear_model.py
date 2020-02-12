@@ -10,32 +10,27 @@ from tensorflow.python.keras.layers import Cropping2D, Cropping3D
 
 
 def create_model(
-    img_dims, crop_margin_from_top=80, weight_loss_angle=0.8, weight_loss_throttle=0.2
+    image_width,
+    image_height,
+    image_channels,
+    crop_margin_from_top=80,
+    weight_loss_angle=0.8,
+    weight_loss_throttle=0.2,
 ):
     tf.keras.backend.clear_session()
 
-    img_in = Input(shape=(img_dims), name="img_in")
+    img_in = Input(shape=(image_height, image_width, image_channels), name="img_in")
 
     x = img_in
 
     x = Cropping2D(((crop_margin_from_top, 0), (0, 0)))(x)
 
     # Define convolutional neural network to extract features from the images
-    x = Convolution2D(
-        filters=24, kernel_size=(5, 5), strides=(2, 2), activation="relu"
-    )(x)
-    x = Convolution2D(
-        filters=32, kernel_size=(5, 5), strides=(2, 2), activation="relu"
-    )(x)
-    x = Convolution2D(
-        filters=64, kernel_size=(5, 5), strides=(2, 2), activation="relu"
-    )(x)
-    x = Convolution2D(
-        filters=64, kernel_size=(3, 3), strides=(2, 2), activation="relu"
-    )(x)
-    x = Convolution2D(
-        filters=64, kernel_size=(3, 3), strides=(1, 1), activation="relu"
-    )(x)
+    x = Convolution2D(filters=24, kernel_size=(5, 5), strides=(2, 2), activation="relu")(x)
+    x = Convolution2D(filters=32, kernel_size=(5, 5), strides=(2, 2), activation="relu")(x)
+    x = Convolution2D(filters=64, kernel_size=(5, 5), strides=(2, 2), activation="relu")(x)
+    x = Convolution2D(filters=64, kernel_size=(3, 3), strides=(2, 2), activation="relu")(x)
+    x = Convolution2D(filters=64, kernel_size=(3, 3), strides=(1, 1), activation="relu")(x)
 
     # Define decision layers to predict steering and throttle
     x = Flatten(name="flattened")(x)
