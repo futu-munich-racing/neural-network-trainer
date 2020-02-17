@@ -52,59 +52,18 @@ def parse_arguments(argv):
 
     return args
 
-
-def _parse_fn(
-    example_serialized, is_training=False, img_width=256, img_height=256, img_channels=3
-):
-    """ Parse tensorflow records and return X, y, 
-        where X is image and y is (angle and throttle)
-    """
-    # TODO: it would be cool, if this could come from a file e.g. meta.json (donkeycar)
-    feature_map = {
-        "image": tf.io.FixedLenFeature([], dtype=tf.string, default_value=""),
-        "angle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
-        "throttle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
-    }
-
-    # Parse Example / sample in tfrecord
-    parsed = tf.io.parse_single_example(example_serialized, feature_map)
-    # Decode JPEG compressed image
-    image = tf.io.decode_jpeg(parsed["image"])
-    # Resize image to given size
-    image = tf.image.resize(image, (img_height, img_width))
-    # Reshape image from 3D to 4D
-    image = tf.reshape(image, (1, img_height, img_width, img_channels))
-    return (image, (parsed["angle"], parsed["throttle"]))
-
-
 class JsonLogger(tf.keras.callbacks.Callback):
-    def on_epoch_end(self, epoch, logs=None):
-        print(json.dumps(dict({"loss": logs["loss"], "val_loss": logs["val_loss"]})))
+    'Simple JSON Logger: Prints metrics as JSON so that it can be monitored while training.'
 
+    def on_epoch_end(self, epoch, logs: dict=None):
 
-def read_tfrecords_dir(
-    dirname: str,
-    image_width: int = 256,
-    image_height: int = 256,
-    image_channels: int = 3,
-):
-    filenames = glob.glob(os.path.join(dirname, "*.tfrecord"))
+        def _convert_values_to_floats(logs: dict):
+            "Convert dictionary values to floats fron numpy float32"
+            for item in logs.items():
+                logs[item[0]] = item[1].astype('float')
+            return logs
 
-    print(f"tfrecords: {filenames}")
-
-    raw_dataset = tf.data.TFRecordDataset(filenames=filenames)
-
-    dataset = raw_dataset.map(
-        lambda d: _parse_fn(
-            example_serialized=d,
-            img_width=image_width,
-            img_height=image_height,
-            img_channels=image_channels,
-        )
-    )
-
-    return dataset
-
+        print(json.dumps(_convert_values_to_floats(logs)))
 
 def main(argv):
 
@@ -115,7 +74,7 @@ def main(argv):
 
     # Load a bunch of training records
     logger.info("Loading training samples tfrecords")
-    parsed_trainset = read_tfrecords_dir(
+    parsed_trainset = fileio.read_tfrecords_dir(
         dirname=args.train_dir,
         image_width=args.input_image_width,
         image_height=args.input_image_height,
@@ -124,7 +83,7 @@ def main(argv):
 
     # Read validation dataset
     logger.info("Loading validation samples tfrecords")
-    parsed_validationset = read_tfrecords_dir(
+    parsed_validationset = fileio.read_tfrecords_dir(
         dirname=args.val_dir,
         image_width=args.input_image_width,
         image_height=args.input_image_height,

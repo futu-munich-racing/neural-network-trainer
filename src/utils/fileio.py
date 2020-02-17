@@ -9,7 +9,6 @@ import tensorflow as tf
 
 from utils import tf_tools
 
-
 def donkey_car_load_records_from_dir(inputdir: str, tubdir: str) -> list:
     "Loads donkeycar type of json records from a directory"
 
@@ -196,3 +195,28 @@ def convert_data_to_tfrecords(inputdir: str, outputdir: str, n_images_per_file=1
             output = os.path.join(outputdir, 'record_%04d.tfrecord' % batch_id)
             print(f'Storing records in {output}')
             writer = tf.io.TFRecordWriter(output)
+
+
+def read_tfrecords_dir(
+    dirname: str,
+    image_width: int = 256,
+    image_height: int = 256,
+    image_channels: int = 3,
+):
+    '''Reads a directory of tfrecords e.g. training/val/test data from a given dir and returns a dataset'''
+    filenames = glob.glob(os.path.join(dirname, "*.tfrecord"))
+
+    print(f"tfrecords: {filenames}")
+
+    raw_dataset = tf.data.TFRecordDataset(filenames=filenames)
+
+    dataset = raw_dataset.map(
+        lambda d: tf_tools._parse_fn(
+            example_serialized=d,
+            img_width=image_width,
+            img_height=image_height,
+            img_channels=image_channels,
+        )
+    )
+
+    return dataset

@@ -60,3 +60,26 @@ def decode_jpeg(image_buffer, scope=None):
     # float.
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     return image
+
+def _parse_fn(
+    example_serialized, is_training=False, img_width=256, img_height=256, img_channels=3
+):
+    """ Parse tensorflow records and return X, y, 
+        where X is image and y is (angle and throttle)
+    """
+    # TODO: it would be cool, if this could come from a file e.g. meta.json (donkeycar)
+    feature_map = {
+        "image": tf.io.FixedLenFeature([], dtype=tf.string, default_value=""),
+        "angle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
+        "throttle": tf.io.FixedLenFeature([], dtype=tf.float32, default_value=0.0),
+    }
+
+    # Parse Example / sample in tfrecord
+    parsed = tf.io.parse_single_example(example_serialized, feature_map)
+    # Decode JPEG compressed image
+    image = tf.io.decode_jpeg(parsed["image"])
+    # Resize image to given size
+    image = tf.image.resize(image, (img_height, img_width))
+    # Reshape image from 3D to 4D
+    image = tf.reshape(image, (1, img_height, img_width, img_channels))
+    return (image, (parsed["angle"], parsed["throttle"]))
