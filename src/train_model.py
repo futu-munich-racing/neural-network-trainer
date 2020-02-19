@@ -52,19 +52,6 @@ def parse_arguments(argv):
 
     return args
 
-class JsonLogger(tf.keras.callbacks.Callback):
-    'Simple JSON Logger: Prints metrics as JSON so that it can be monitored while training.'
-
-    def on_epoch_end(self, epoch, logs: dict=None):
-
-        def _convert_values_to_floats(logs: dict):
-            "Convert dictionary values to floats fron numpy float32"
-            for item in logs.items():
-                logs[item[0]] = item[1].astype('float')
-            return logs
-
-        print(json.dumps(_convert_values_to_floats(logs)))
-
 def main(argv):
 
     args = parse_arguments(argv=argv)
@@ -142,7 +129,7 @@ def main(argv):
         steps_per_epoch=num_train_samples // args.batch_size,
         validation_steps=num_val_samples // args.batch_size,
         epochs=args.epochs,
-        callbacks=[JsonLogger(), save_best, early_stop],
+        callbacks=[tf_tools.JsonLogger(), save_best, early_stop],
         verbose=args.verbose,
     )
 

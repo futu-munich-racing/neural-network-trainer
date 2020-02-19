@@ -1,3 +1,4 @@
+import json
 import tensorflow as tf
 
 # The following functions can be used to convert a value to a type compatible
@@ -83,3 +84,16 @@ def _parse_fn(
     # Reshape image from 3D to 4D
     image = tf.reshape(image, (1, img_height, img_width, img_channels))
     return (image, (parsed["angle"], parsed["throttle"]))
+
+class JsonLogger(tf.keras.callbacks.Callback):
+    'Simple JSON Logger: Prints metrics as JSON so that it can be monitored while training.'
+
+    def on_epoch_end(self, epoch, logs: dict=None):
+
+        def _convert_values_to_floats(logs: dict):
+            "Convert dictionary values to floats fron numpy float32"
+            for item in logs.items():
+                logs[item[0]] = item[1].astype('float')
+            return logs
+
+        print(json.dumps(_convert_values_to_floats(logs)))
