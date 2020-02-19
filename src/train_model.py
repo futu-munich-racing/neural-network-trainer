@@ -22,7 +22,7 @@ def parse_arguments(argv):
     parser.add_argument("-val-dir", type=str, default="")
     parser.add_argument("-test-dir", type=str, default="")
     parser.add_argument("-output-model-file", type=str, default="data/models/model.h5")
-    parser.add_argument("--model-arch-name", type=str, default='basiclinear')
+    parser.add_argument("--model-arch-name", type=str, default="basiclinear")
     parser.add_argument("--batch-size", type=int, default=defaults.BATCH_SIZE)
     parser.add_argument("--epochs", type=int, default=defaults.EPOCHS)
     parser.add_argument("--min-delta", type=float, default=defaults.MIN_DELTA)
@@ -51,6 +51,7 @@ def parse_arguments(argv):
     args = parser.parse_args()
 
     return args
+
 
 def main(argv):
 
@@ -86,14 +87,14 @@ def main(argv):
     )
 
     # Initialise model with given architecture
-    if args.model_arch_name == 'basiclinear':
+    if args.model_arch_name == "basiclinear":
         model = basic_linear_model.create_model(
             image_width=args.input_image_width,
             image_height=args.input_image_height,
             image_channels=args.input_image_channels,
             crop_margin_from_top=args.input_image_vertical_crop_pixels,
         )
-    elif args.model_arch_name == 'mobilenetv2':
+    elif args.model_arch_name == "mobilenetv2":
         model = mobilenet_v2.create_model(
             image_width=args.input_image_width,
             image_height=args.input_image_height,

@@ -9,6 +9,7 @@ import tensorflow as tf
 
 from utils import tf_tools
 
+
 def donkey_car_load_records_from_dir(inputdir: str, tubdir: str) -> list:
     "Loads donkeycar type of json records from a directory"
 
@@ -155,7 +156,7 @@ def load_csv_records(filename: str) -> list():
 
         for line in f:
             values = line.replace("\n", "").split(",")
-            
+
             record = dict()
             for i, column in enumerate(columns):
                 if (column == "user/throttle") or (column == "user/angle"):
@@ -164,6 +165,7 @@ def load_csv_records(filename: str) -> list():
 
             records.append(record)
     return records
+
 
 def convert_data_to_tfrecords(inputdir: str, outputdir: str, n_images_per_file=10240):
     # records = load_tub_data_to_records(inputdir)
@@ -175,12 +177,12 @@ def convert_data_to_tfrecords(inputdir: str, outputdir: str, n_images_per_file=1
 
     # Write the `tf.Example` observations to the file.
     batch_id = 0
-    output = os.path.join(outputdir, 'record_%04d.tfrecord' % batch_id)
-    print(f'Storing records in {output}')
+    output = os.path.join(outputdir, "record_%04d.tfrecord" % batch_id)
+    print(f"Storing records in {output}")
     writer = tf.io.TFRecordWriter(output)
     for i, record in enumerate(records):
         # parse fields
-        image = open(os.path.join(inputdir, record["img_path"]), 'rb').read()
+        image = open(os.path.join(inputdir, record["img_path"]), "rb").read()
 
         angle = record["user/angle"]
         throttle = record["user/throttle"]
@@ -189,11 +191,11 @@ def convert_data_to_tfrecords(inputdir: str, outputdir: str, n_images_per_file=1
 
         if i % 1000 == 0:
             print(i, len(records), 100 * i / len(records))
-        
+
         if (i > 0) and (i % n_images_per_file == 0):
             batch_id += 1
-            output = os.path.join(outputdir, 'record_%04d.tfrecord' % batch_id)
-            print(f'Storing records in {output}')
+            output = os.path.join(outputdir, "record_%04d.tfrecord" % batch_id)
+            print(f"Storing records in {output}")
             writer = tf.io.TFRecordWriter(output)
 
 
@@ -203,7 +205,7 @@ def read_tfrecords_dir(
     image_height: int = 256,
     image_channels: int = 3,
 ):
-    '''Reads a directory of tfrecords e.g. training/val/test data from a given dir and returns a dataset'''
+    """Reads a directory of tfrecords e.g. training/val/test data from a given dir and returns a dataset"""
     filenames = glob.glob(os.path.join(dirname, "*.tfrecord"))
 
     print(f"tfrecords: {filenames}")

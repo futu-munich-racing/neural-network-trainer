@@ -62,6 +62,7 @@ def decode_jpeg(image_buffer, scope=None):
     image = tf.image.convert_image_dtype(image, dtype=tf.float32)
     return image
 
+
 def _parse_fn(
     example_serialized, is_training=False, img_width=256, img_height=256, img_channels=3
 ):
@@ -85,15 +86,15 @@ def _parse_fn(
     image = tf.reshape(image, (1, img_height, img_width, img_channels))
     return (image, (parsed["angle"], parsed["throttle"]))
 
+
 class JsonLogger(tf.keras.callbacks.Callback):
-    'Simple JSON Logger: Prints metrics as JSON so that it can be monitored while training.'
+    "Simple JSON Logger: Prints metrics as JSON so that it can be monitored while training."
 
-    def on_epoch_end(self, epoch, logs: dict=None):
-
+    def on_epoch_end(self, epoch, logs: dict = None):
         def _convert_values_to_floats(logs: dict):
             "Convert dictionary values to floats fron numpy float32"
             for item in logs.items():
-                logs[item[0]] = item[1].astype('float')
+                logs[item[0]] = item[1].astype("float")
             return logs
 
         print(json.dumps(_convert_values_to_floats(logs)))
