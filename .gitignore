@@ -12,3 +12,9 @@ tmp/*
 
 # Ignore cached stuff
 __pycache__
+
+# Ignore notebook snapshot
+.ipynb_checkpoints
+
+# Ignore tensorflow logs
+logs/
