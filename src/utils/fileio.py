@@ -75,26 +75,32 @@ def move_train_split_files(
             for record in records:
 
                 img_file = record["img_path"]
+                img_file_full_path = os.path.join(inputdir, img_file)
+                # Make dir if one does not exist
                 if (
                     os.path.exists(os.path.dirname(os.path.join(outputdir, img_file)))
                     == False
                 ):
                     os.makedirs(os.path.dirname(os.path.join(outputdir, img_file)))
 
-                shutil.copyfile(
-                    os.path.join(inputdir, img_file), os.path.join(outputdir, img_file)
-                )
-                f_csv.write(
-                    "%s,%s,%f,%f,%s,%s\n"
-                    % (
-                        record["cam/image_array"],
-                        record["timestamp"],
-                        record["user/throttle"],
-                        record["user/angle"],
-                        record["user/mode"],
-                        record["img_path"],
+                # Make sure that the image file actually exists (it happens that it does not :())
+                if os.path.exists(img_file_full_path):
+                    shutil.copyfile(
+                        img_file_full_path, os.path.join(outputdir, img_file)
                     )
-                )
+                    f_csv.write(
+                        "%s,%s,%f,%f,%s,%s\n"
+                        % (
+                            record.get("cam/image_array", 'na'),
+                            record.get("timestamp", 0),
+                            record.get("user/throttle", 0.0),
+                            record.get("user/angle", 0.0),
+                            record.get("user/mode", 'na'),
+                            record.get("img_path", 'na'),
+                        )
+                    )
+                else:
+                    print('Image file missing: %s' % img_file_full_path)
 
     _move_records_data(
         inputdir=inputdir,
