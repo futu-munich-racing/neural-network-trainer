@@ -4,9 +4,10 @@ import argparse
 import glob
 import logging
 import json
+import datetime
 
 import tensorflow as tf
-from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping
+from tensorflow.python.keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
 
 from utils import fileio
 from utils import model_selection
@@ -123,6 +124,9 @@ def main(argv):
         mode="auto",
     )
 
+    log_dir = "logs/fit/" + args.model_arch_name + '_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard = TensorBoard(log_dir, histogram_freq=1)
+
     # Train the car
     model.fit(
         parsed_trainset,
@@ -130,7 +134,7 @@ def main(argv):
         steps_per_epoch=num_train_samples // args.batch_size,
         validation_steps=num_val_samples // args.batch_size,
         epochs=args.epochs,
-        callbacks=[tf_tools.JsonLogger(), save_best, early_stop],
+        callbacks=[tf_tools.JsonLogger(), save_best, early_stop, tensorboard],
         verbose=args.verbose,
     )
 
